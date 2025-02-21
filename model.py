@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import layers, callbacks, optimizers, models
+from tensorflow.keras import layers, callbacks, optimizers, models, regularizers
 
 # -------------------------------
 # Configuration
@@ -9,7 +9,7 @@ from tensorflow.keras import layers, callbacks, optimizers, models
 data_dir = 'completed_landmarks'  # Root folder with subfolders per class (e.g., mom, dad, etc.)
 target_timesteps = 50             # Fixed number of timesteps per sequence
 num_features = 126                # Each frame is flattened to 126 features (2 x 63)
-num_classes = 9                   # Update: 9 classes instead of 250
+num_classes = 9                   # 9 classes
 batch_size = 256
 
 # -------------------------------
@@ -59,14 +59,10 @@ print(f"Train samples: {len(train_file_paths)}, Validation samples: {len(val_fil
 # Create tf.data Dataset
 # -------------------------------
 def load_npy(path, label):
-    # Convert byte string to regular string.
     path_str = path.decode('utf-8')
-    # Load the npy file; expected shape: (num_frames, 2, 63) or (num_frames, 126)
     seq = np.load(path_str)
-    # If the sequence is in shape (num_frames, 2, 63), flatten each frame to (126,)
     if len(seq.shape) == 3:
         seq = seq.reshape(seq.shape[0], -1)
-    # Pad or crop to target_timesteps.
     T = seq.shape[0]
     if T < target_timesteps:
         pad = np.zeros((target_timesteps - T, seq.shape[1]), dtype=seq.dtype)
@@ -79,7 +75,6 @@ def load_and_process(path, label):
     seq, lbl = tf.numpy_function(func=load_npy,
                                    inp=[path, label],
                                    Tout=[tf.float32, tf.int64])
-    # Set static shape for downstream processing.
     seq.set_shape([target_timesteps, num_features])
     lbl.set_shape([])
     return seq, lbl
@@ -97,17 +92,19 @@ val_dataset = create_dataset(val_file_paths, val_labels, batch_size)
 test_dataset = create_dataset(test_file_paths, test_labels, batch_size)
 
 # -------------------------------
-# Build the LSTM Model
+# Build the LSTM Model with Boosted Performance
 # -------------------------------
 model = models.Sequential([
     layers.Masking(mask_value=0.0, input_shape=(target_timesteps, num_features)),
-    layers.Bidirectional(layers.LSTM(64, return_sequences=True)),
-    layers.Bidirectional(layers.LSTM(64)),
+    layers.Bidirectional(layers.LSTM(128, return_sequences=True,
+                                     kernel_regularizer=regularizers.l2(1e-4))),
+    layers.Bidirectional(layers.LSTM(128,
+                                     kernel_regularizer=regularizers.l2(1e-4))),
     layers.Dropout(0.5),
     layers.Dense(num_classes, activation='softmax')
 ])
 
-model.compile(optimizer=optimizers.Adam(),
+model.compile(optimizer=optimizers.Adam(learning_rate=1e-3),
               loss='sparse_categorical_crossentropy',
               metrics=['accuracy'])
 
@@ -118,6 +115,7 @@ model.summary()
 # -------------------------------
 early_stop = callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 checkpoint_cb = callbacks.ModelCheckpoint('best_model.h5', monitor='val_loss', save_best_only=True, verbose=1)
+reduce_lr = callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, verbose=1)
 
 # -------------------------------
 # Train the Model
@@ -125,7 +123,7 @@ checkpoint_cb = callbacks.ModelCheckpoint('best_model.h5', monitor='val_loss', s
 history = model.fit(train_dataset,
                     validation_data=val_dataset,
                     epochs=40,
-                    callbacks=[early_stop, checkpoint_cb])
+                    callbacks=[early_stop, checkpoint_cb, reduce_lr])
 
 # -------------------------------
 # Evaluate the Model
