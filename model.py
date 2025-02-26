@@ -6,10 +6,10 @@ from tensorflow.keras import layers, callbacks, optimizers, models, regularizers
 # -------------------------------
 # Configuration
 # -------------------------------
-data_dir = 'lesson10_landmarks'  # Root folder with subfolders per class (e.g., mom, dad, etc.)
+data_dir = 'lesson1_landmarks'  # Root folder with subfolders per class (e.g., mom, dad, etc.)
 target_timesteps = 50             # Fixed number of timesteps per sequence
 num_features = 126                # Each frame is flattened to 126 features (2 x 63)
-num_classes = 10                   # 9 classes
+num_classes = 4                  # Number of classes
 batch_size = 256
 
 # -------------------------------
@@ -92,17 +92,19 @@ val_dataset = create_dataset(val_file_paths, val_labels, batch_size)
 test_dataset = create_dataset(test_file_paths, test_labels, batch_size)
 
 # -------------------------------
-# Build the LSTM Model with Boosted Performance
+# Build the LSTM Model with Boosted Performance using the Functional API
 # -------------------------------
-model = models.Sequential([
-    layers.Masking(mask_value=0.0, input_shape=(target_timesteps, num_features)),
-    layers.Bidirectional(layers.LSTM(128, return_sequences=True,
-                                     kernel_regularizer=regularizers.l2(1e-4))),
-    layers.Bidirectional(layers.LSTM(128,
-                                     kernel_regularizer=regularizers.l2(1e-4))),
-    layers.Dropout(0.5),
-    layers.Dense(num_classes, activation='softmax')
-])
+# Changed to use an explicit input layer for better TFJS compatibility.
+inputs = tf.keras.Input(shape=(target_timesteps, num_features), name="input_layer")
+x = layers.Masking(mask_value=0.0)(inputs)
+x = layers.Bidirectional(layers.LSTM(128, return_sequences=True,
+                                     kernel_regularizer=regularizers.l2(1e-4)))(x)
+x = layers.Bidirectional(layers.LSTM(128,
+                                     kernel_regularizer=regularizers.l2(1e-4)))(x)
+x = layers.Dropout(0.5)(x)
+outputs = layers.Dense(num_classes, activation='softmax')(x)
+
+model = models.Model(inputs=inputs, outputs=outputs)
 
 model.compile(optimizer=optimizers.Adam(learning_rate=1e-3),
               loss='sparse_categorical_crossentropy',
@@ -114,7 +116,7 @@ model.summary()
 # Callbacks
 # -------------------------------
 early_stop = callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-checkpoint_cb = callbacks.ModelCheckpoint('lesson10.h5', monitor='val_loss', save_best_only=True, verbose=1)
+checkpoint_cb = callbacks.ModelCheckpoint('lesson1.h5', monitor='val_loss', save_best_only=True, verbose=1)
 reduce_lr = callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, verbose=1)
 
 # -------------------------------
