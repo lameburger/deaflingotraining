@@ -76,8 +76,8 @@ def get_video_paths(input_dir, extensions=('.mp4', '.avi', '.mov')):
 
 if __name__ == "__main__":
     # Directories: raw_data contains subfolders for each sign; raw_landmarks will mimic that structure.
-    input_dir = "raw_data"
-    output_dir = "raw_landmarks"
+    input_dir = "lesson8"
+    output_dir = "lesson8_landmarks"
     os.makedirs(output_dir, exist_ok=True)
 
     video_list = get_video_paths(input_dir)

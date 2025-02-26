@@ -6,10 +6,10 @@ from tensorflow.keras import layers, callbacks, optimizers, models, regularizers
 # -------------------------------
 # Configuration
 # -------------------------------
-data_dir = 'completed_landmarks'  # Root folder with subfolders per class (e.g., mom, dad, etc.)
+data_dir = 'lesson10_landmarks'  # Root folder with subfolders per class (e.g., mom, dad, etc.)
 target_timesteps = 50             # Fixed number of timesteps per sequence
 num_features = 126                # Each frame is flattened to 126 features (2 x 63)
-num_classes = 9                   # 9 classes
+num_classes = 10                   # 9 classes
 batch_size = 256
 
 # -------------------------------
@@ -114,7 +114,7 @@ model.summary()
 # Callbacks
 # -------------------------------
 early_stop = callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-checkpoint_cb = callbacks.ModelCheckpoint('best_model.h5', monitor='val_loss', save_best_only=True, verbose=1)
+checkpoint_cb = callbacks.ModelCheckpoint('lesson10.h5', monitor='val_loss', save_best_only=True, verbose=1)
 reduce_lr = callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, verbose=1)
 
 # -------------------------------
