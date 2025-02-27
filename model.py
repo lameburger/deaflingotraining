@@ -6,9 +6,9 @@ from tensorflow.keras import layers, callbacks, optimizers, models, regularizers
 # -------------------------------
 # Configuration
 # -------------------------------
-data_dir = 'lesson1_landmarks'  # Root folder with subfolders per class (e.g., mom, dad, etc.)
+data_dir = 'lesson1_landmarks'  # Folder with subfolders per class
 target_timesteps = 50             # Fixed number of timesteps per sequence
-num_features = 126                # Each frame is flattened to 126 features (2 x 63)
+num_features = 126                # Each frame is flattened to 126 features
 num_classes = 4                  # Number of classes
 batch_size = 256
 
@@ -92,10 +92,10 @@ val_dataset = create_dataset(val_file_paths, val_labels, batch_size)
 test_dataset = create_dataset(test_file_paths, test_labels, batch_size)
 
 # -------------------------------
-# Build the LSTM Model with Boosted Performance using the Functional API
+# Build the LSTM Model using Functional API with explicit batch_shape
 # -------------------------------
-# Changed to use an explicit input layer for better TFJS compatibility.
-inputs = tf.keras.Input(shape=(target_timesteps, num_features), name="input_layer")
+# Changed from using 'input_shape' to 'batch_shape' for explicit metadata.
+inputs = tf.keras.Input(batch_shape=(None, target_timesteps, num_features), name="input_layer")
 x = layers.Masking(mask_value=0.0)(inputs)
 x = layers.Bidirectional(layers.LSTM(128, return_sequences=True,
                                      kernel_regularizer=regularizers.l2(1e-4)))(x)
@@ -116,7 +116,7 @@ model.summary()
 # Callbacks
 # -------------------------------
 early_stop = callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-checkpoint_cb = callbacks.ModelCheckpoint('lesson1.h5', monitor='val_loss', save_best_only=True, verbose=1)
+checkpoint_cb = callbacks.ModelCheckpoint('lesson10.h5', monitor='val_loss', save_best_only=True, verbose=1)
 reduce_lr = callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, verbose=1)
 
 # -------------------------------

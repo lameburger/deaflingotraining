@@ -9,4 +9,4 @@
 #SBATCH --output=gpu-job.log
 
 source activate py39   # Activate your environment (adjust if necessary)
-python model.py
+python model2.py
